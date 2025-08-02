@@ -42,6 +42,20 @@ canvas.addEventListener('touchstart', onTouchStart, { passive: false });
 canvas.addEventListener('touchmove', onTouchMove, { passive: false });
 canvas.addEventListener('touchend', onTouchEnd);
 
+document.getElementById('play-again-button').addEventListener('click', function() {
+    // Hide the win modal
+    document.getElementById('win-modal').classList.add('hidden');
+    document.getElementById('win-modal').classList.remove('opacity-100');
+    document.getElementById('win-modal').classList.add('opacity-0');
+    
+    // Reset the puzzle/game state here
+    // For example, you might want to reload the puzzle or reset variables
+    // Call your game reset function, e.g.:
+    if (typeof resetGame === 'function') {
+        resetGame();
+    }
+});
+
 // --- Gemini API Functions ---
 
 /**
@@ -346,11 +360,13 @@ function checkWinCondition() {
         isPuzzleActive = false;
         const modalContent = winModal.querySelector('div');
         winModal.classList.remove('hidden');
-        // Trigger opacity and scale transition
         setTimeout(() => {
             winModal.classList.remove('opacity-0');
             modalContent.classList.remove('scale-95');
-        }, 10); // Small delay for CSS transition to apply
+        }, 10);
+
+        // NEW: Launch confetti when the puzzle is solved!
+        launchConfetti();
     }
 }
 
@@ -363,96 +379,29 @@ function resetGame() {
     const modalContent = winModal.querySelector('div');
     winModal.classList.add('opacity-0');
     modalContent.classList.add('scale-95');
-    // Hide modal after transition
     setTimeout(() => winModal.classList.add('hidden'), 300);
 
     // Reset UI elements
-    imageLoader.value = ''; // Clear file input
-    imageLoader.parentElement.classList.remove('hidden'); // Show file input
-    generateIdeaButton.parentElement.parentElement.classList.remove('hidden'); // Show AI section
-    difficultyContainer.classList.add('hidden'); // Hide difficulty until new image is loaded/generated
-    ideaContainer.classList.add('hidden'); // Hide idea box
+    imageLoader.value = '';
+    imageLoader.parentElement.classList.remove('hidden');
+    generateIdeaButton.parentElement.parentElement.classList.remove('hidden');
+    difficultyContainer.classList.add('hidden');
+    ideaContainer.classList.add('hidden');
     instructions.textContent = "Upload an image, or let AI create one for you!";
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-    canvas.width = 0; // Reset canvas dimensions
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.width = 0;
     canvas.height = 0;
-    puzzleImage = new Image(); // Reset the puzzle image object
-}
-function checkWinCondition() {
-    // This line checks if EVERY piece in the 'pieces' array has its 'isPlaced' property set to true.
-    if (pieces.every(p => p.isPlaced)) {
-        isPuzzleActive = false; // Stop the game loop
-        const modalContent = winModal.querySelector('div');
-        winModal.classList.remove('hidden'); // Make the modal visible
-        // Adds a slight delay to allow the 'hidden' class removal to register before
-        // the opacity and scale transitions begin, ensuring the animation plays.
-        setTimeout(() => {
-            winModal.classList.remove('opacity-0'); // Fade in
-            modalContent.classList.remove('scale-95'); // Scale up
-        }, 10);
+    confettiContainer.innerHTML = '';
+
+    // If you want to instantly restart with the same image and difficulty:
+    if (puzzleImage.src) {
+        instructions.textContent = "Drag the pieces to solve the puzzle!";
+        difficultyContainer.classList.remove('hidden');
+        imageLoader.parentElement.classList.add('hidden');
+        generateIdeaButton.parentElement.parentElement.classList.add('hidden');
+        setupPuzzle();
+        shuffleAndPlacePieces();
+        isPuzzleActive = true;
+        drawLoop();
     }
-}
-const confettiContainer = document.getElementById('confetti-container');
-function getRandomColor() {
-    const colors = ['#FFC107', '#E91E63', '#9C27B0', '#2196F3', '#00BCD4', '#8BC34A', '#FF5722'];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-function launchConfetti() {
-    const numberOfConfetti = 100; // How many pieces of confetti
-    const containerRect = confettiContainer.getBoundingClientRect();
-
-    for (let i = 0; i < numberOfConfetti; i++) {
-        const confetti = document.createElement('div');
-        confetti.classList.add('confetti');
-
-        // Randomize shape
-        if (Math.random() < 0.3) { // 30% chance of square
-            confetti.classList.add('square');
-        } else if (Math.random() < 0.6) { // 30% chance of triangle
-             confetti.classList.add('triangle');
-        }
-
-
-        const startX = Math.random() * containerRect.width;
-        const startY = Math.random() * containerRect.height / 2; // Start higher up
-        const endX = Math.random() * containerRect.width * 1.5 - (containerRect.width * 0.25); // Wider spread
-        const endY = containerRect.height + 50; // Fall off screen
-
-        confetti.style.setProperty('--x-start', `${startX}px`);
-        confetti.style.setProperty('--y-start', `${startY}px`);
-        confetti.style.setProperty('--x-end', `${endX}px`);
-        confetti.style.setProperty('--y-end', `${endY}px`);
-        confetti.style.backgroundColor = getRandomColor();
-        confetti.style.animationDelay = `${Math.random() * 0.5}s`; // Stagger animation
-        confetti.style.animationDuration = `${2 + Math.random() * 2}s`; // Vary duration
-
-        confettiContainer.appendChild(confetti);
-
-        // Remove confetti after animation to prevent DOM bloat
-        confetti.addEventListener('animationend', () => {
-            confetti.remove();
-        });
-    }
-}
-function checkWinCondition() {
-    if (pieces.every(p => p.isPlaced)) {
-        isPuzzleActive = false;
-        const modalContent = winModal.querySelector('div');
-        winModal.classList.remove('hidden');
-        setTimeout(() => {
-            winModal.classList.remove('opacity-0');
-            modalContent.classList.remove('scale-95');
-        }, 10);
-
-        // NEW: Launch confetti when the puzzle is solved!
-        launchConfetti();
-    }
-}
-function resetGame() {
-    // ... existing code ...
-
-    // NEW: Clear any remaining confetti
-    confettiContainer.innerHTML = ''; // Remove all child elements
-
-    puzzleImage = new Image();
 }
